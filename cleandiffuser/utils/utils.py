@@ -262,7 +262,7 @@ class PositionalEmbedding(nn.Module):
         )
         freqs = freqs / (self.dim // 2 - (1 if self.endpoint else 0))
         freqs = (1 / self.max_positions) ** freqs
-        x = x.ger(freqs.to(x.dtype))    # [b, d/2]
+        x = x.ger(freqs.to(x.dtype))    # [b, d/2]， ger是两个向量的外积，比如[a,]*[b,]=[a, b]
         x = torch.cat([x.cos(), x.sin()], dim=1)
         return x
 

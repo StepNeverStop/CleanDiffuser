@@ -135,9 +135,9 @@ class BaseDiffusionSDE(DiffusionModel):
 
     def update_classifier(self, x0, condition):
 
-        xt, t, eps = self.add_noise(x0)
+        xt, t, eps = self.add_noise(x0) # xt加噪后的输入，t加噪时间步，eps注入的噪声
 
-        log = self.classifier.update(xt, t, condition)
+        log = self.classifier.update(xt, t, condition)  # 这里的condition其实是分类器的变量，比如p(s|a)中的s
 
         return log
 
