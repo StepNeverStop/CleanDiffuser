@@ -44,8 +44,8 @@ class PearceMlp(BaseNNDiffusion):
             nn.Linear(act_dim, emb_dim), nn.LeakyReLU(), nn.Linear(emb_dim, emb_dim))
 
         self.fcs = nn.ModuleList([
-            FCBlock(emb_dim * (2 + To), hidden_dim),
-            FCBlock(hidden_dim + act_dim + 1, hidden_dim),
+            FCBlock(emb_dim * (2 + To), hidden_dim),    # 这里的2是噪声action和timestep的embedding，To指的是条件中state的时间步数
+            FCBlock(hidden_dim + act_dim + 1, hidden_dim),  # hidden_dim是上一层的输出维度，act_dim是拼接上加噪后的action输入维度，1是未embeded的时间步
             FCBlock(hidden_dim + act_dim + 1, hidden_dim),
             nn.Linear(hidden_dim + act_dim + 1, act_dim)])
 
@@ -61,8 +61,10 @@ class PearceMlp(BaseNNDiffusion):
         Output:
             y:          (b, act_dim)
         """
+        # noise是标量时间步，map_noise是对时间步进行embedding
+        # x_e: [B, emb_dim], t_e: [B, emb_dim]
         x_e, t_e = self.act_emb(x), self.map_noise(noise)
-        t = noise.unsqueeze(-1)
+        t = noise.unsqueeze(-1) # [b,] => [b, 1]
 
         if condition is not None:
             nn1 = self.fcs[0](torch.cat([x_e, t_e, torch.flatten(condition, 1)], -1))

@@ -93,7 +93,7 @@ class BaseDiffusionSDE(DiffusionModel):
 
     def loss(self, x0, condition=None):
 
-        xt, t, eps = self.add_noise(x0)
+        xt, t, eps = self.add_noise(x0) # xt加噪后的输入，t加噪时间步，eps注入的噪声
 
         condition = self.model["condition"](condition) if condition is not None else None
 
@@ -364,6 +364,7 @@ class DiscreteDiffusionSDE(BaseDiffusionSDE):
         # ================= Noise Schedule =================
         if isinstance(noise_schedule, str):
             if noise_schedule in SUPPORTED_NOISE_SCHEDULES.keys():
+                # alpha, sigma长度与timesteps长度一致
                 self.alpha, self.sigma = SUPPORTED_NOISE_SCHEDULES[noise_schedule]["forward"](
                     self.t_diffusion, **(noise_schedule_params or {}))
             else:
@@ -373,18 +374,21 @@ class DiscreteDiffusionSDE(BaseDiffusionSDE):
         else:
             raise ValueError("noise_schedule must be a callable or a string")
 
-        self.logSNR = torch.log(self.alpha / self.sigma)
+        self.logSNR = torch.log(self.alpha / self.sigma)    # 信噪比的对数
 
     # ==================== Training: Score Matching ======================
 
     def add_noise(self, x0, t=None, eps=None):
 
+        # 生成batch个timestep，范围到diffusion_steps
         t = torch.randint(self.diffusion_steps, (x0.shape[0],), device=self.device) if t is None else t
-        eps = torch.randn_like(x0) if eps is None else eps
+        eps = torch.randn_like(x0) if eps is None else eps  # 从x0到xt注入的噪声
 
+        # 这里的alpha[t]形状为[b,]，从alpha中按采样的时间步batch索引相关值
+        # 这里将alpha和simga从[b,]变换为[b, 1]
         alpha, sigma = at_least_ndim(self.alpha[t], x0.dim()), at_least_ndim(self.sigma[t], x0.dim())
-
-        xt = alpha * x0 + sigma * eps
+        # 这里的alpha是DDPM中的sqrt(bar(alpha))，sigma是sqrt(1-alpha**2)
+        xt = alpha * x0 + sigma * eps   # 一步到位的加噪
         xt = (1. - self.fix_mask) * xt + self.fix_mask * x0
 
         return xt, t, eps

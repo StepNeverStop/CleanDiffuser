@@ -120,7 +120,7 @@ def inverse_linear_noise_schedule(
 
 
 def cosine_noise_schedule(t_diffusion: torch.Tensor, s: float = 0.008):
-    t_diffusion[-1] = 0.9946
+    t_diffusion[-1] = 0.9946    # todo: 这里为什么要把最后一个timestep从1变成0.9946？
     alpha = (np.pi / 2.0 * (t_diffusion + s) / (1 + s)).cos() / np.cos(
         np.pi / 2.0 * s / (1 + s))
     sigma = (1.0 - alpha**2).sqrt()
@@ -254,12 +254,15 @@ class PositionalEmbedding(nn.Module):
         self.endpoint = endpoint
 
     def forward(self, x):
+        """
+        x: [b,]
+        """
         freqs = torch.arange(
             start=0, end=self.dim // 2, dtype=torch.float32, device=x.device
         )
         freqs = freqs / (self.dim // 2 - (1 if self.endpoint else 0))
         freqs = (1 / self.max_positions) ** freqs
-        x = x.ger(freqs.to(x.dtype))
+        x = x.ger(freqs.to(x.dtype))    # [b, d/2]
         x = torch.cat([x.cos(), x.sin()], dim=1)
         return x
 

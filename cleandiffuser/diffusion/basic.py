@@ -45,7 +45,7 @@ class DiffusionModel:
 
         self.device = device
         self.grad_clip_norm = grad_clip_norm
-        self.diffusion_steps = diffusion_steps
+        self.diffusion_steps = diffusion_steps  # 这个参数有可能会被子类重载
         self.ema_rate = ema_rate
 
         # nn_condition is None means that the model is not conditioned on any input.
