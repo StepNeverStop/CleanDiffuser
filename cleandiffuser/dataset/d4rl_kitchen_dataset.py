@@ -66,18 +66,18 @@ class D4RLKitchenDataset(BaseDataset):
         self.horizon = horizon
         self.o_dim, self.a_dim = observations.shape[-1], actions.shape[-1]
 
-        self.indices = []
+        self.indices = []   # 记录所有padding后episode切分成horizon长度的子序列的标记信息：(episode index, start index in episode, end index in episode)
         self.seq_obs, self.seq_act, self.seq_rew = [], [], []
         self.tml_and_not_timeout = []
 
-        self.path_lengths, ptr = [], 0
-        path_idx = 0
-        for i in range(timeouts.shape[0]):
-            if timeouts[i] or terminals[i] or i == timeouts.shape[0] - 1:
+        self.path_lengths, ptr = [], 0  # path_lengths: 每个episode的长度, ptr: 表示当前episode的起始位置
+        path_idx = 0    # 记录第几条episode
+        for i in range(timeouts.shape[0]):  # 遍历数据集
+            if timeouts[i] or terminals[i] or i == timeouts.shape[0] - 1:   # 判断超时、终止、数据集结束等情况
                 self.path_lengths.append(i - ptr + 1)
 
-                if terminals[i] and not timeouts[i]:
-                    self.tml_and_not_timeout.append([path_idx, i - ptr])
+                if terminals[i] and not timeouts[i]:    # 表示达到终止状态而结束的episode
+                    self.tml_and_not_timeout.append([path_idx, i - ptr])    # 记录终止状态的episode的index和长度
 
                 _seq_obs = np.zeros((max_path_length, self.o_dim), dtype=np.float32)
                 _seq_act = np.zeros((max_path_length, self.a_dim), dtype=np.float32)
@@ -87,7 +87,7 @@ class D4RLKitchenDataset(BaseDataset):
                 _seq_act[:i - ptr + 1] = actions[ptr:i + 1]
                 _seq_rew[:i - ptr + 1] = rewards[ptr:i + 1][:, None]
 
-                # repeat padding
+                # repeat padding，将最后一个状态、动作、奖励重复填充到最大长度
                 _seq_obs[i - ptr + 1:] = normed_observations[i]  # repeat last state
                 _seq_act[i - ptr + 1:] = 0  # repeat zero action
                 _seq_rew[i - ptr + 1:] = rewards[i]  # repeat last reward
@@ -96,18 +96,19 @@ class D4RLKitchenDataset(BaseDataset):
                 self.seq_act.append(_seq_act)
                 self.seq_rew.append(_seq_rew)
 
-                max_start = min(self.path_lengths[-1] - 1, max_path_length - horizon)
+                max_start = min(self.path_lengths[-1] - 1, max_path_length - horizon)   # 将episode切分成horizon长度的子序列，max_start表示具有真实数据（非padding）最大的起始位置
                 self.indices += [(path_idx, start, start + horizon) for start in range(max_start + 1)]
 
                 ptr = i + 1
                 path_idx += 1
 
-        self.seq_obs = np.array(self.seq_obs)
-        self.seq_act = np.array(self.seq_act)
-        self.seq_rew = np.array(self.seq_rew)
+        self.seq_obs = np.array(self.seq_obs)   # [N, max_path_length, o_dim]
+        self.seq_act = np.array(self.seq_act)   # [N, max_path_length, a_dim]
+        self.seq_rew = np.array(self.seq_rew)   # [N, max_path_length, 1]
 
-        self.seq_val = np.copy(self.seq_rew)
-        for i in range(max_path_length - 1):
+        self.seq_val = np.copy(self.seq_rew)    # [N, max_path_length, 1]
+        # todo: figure out the meaning of the following code，这里是否会不太严谨，padding的reward也计算了return
+        for i in range(max_path_length - 1):    # 计算每条轨迹的Monte Carlo return
             self.seq_val[:, - 2 - i] = self.seq_rew[:, -2 - i] + discount * self.seq_val[:, -1 - i]
         self.tml_and_not_timeout = np.array(self.tml_and_not_timeout, dtype=np.int64)
 

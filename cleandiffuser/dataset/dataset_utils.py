@@ -399,6 +399,9 @@ def dict_apply(
 
 
 def loop_dataloader(dl):
+    """
+    循环data loader，用于无限循环训练
+    """
     while True:
         for b in dl:
             yield b

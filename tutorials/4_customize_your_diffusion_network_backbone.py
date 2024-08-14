@@ -14,7 +14,7 @@ from cleandiffuser.diffusion import DiscreteDiffusionSDE
 from cleandiffuser.nn_condition import MLPCondition
 from cleandiffuser.nn_diffusion import BaseNNDiffusion
 from cleandiffuser.utils import report_parameters
-
+"""diffusion model for p(a_{0...t}|s)"""
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
@@ -35,7 +35,7 @@ class MixerBlock(nn.Module):
             nn.Linear(hidden_size, dim_c), nn.GELU('tanh'), nn.Linear(dim_c, hidden_size))
 
         self.adaLN_modulation = nn.Sequential(
-            nn.SiLU(), nn.Linear(hidden_size, hidden_size * 6))
+            nn.SiLU(), nn.Linear(hidden_size, hidden_size * 6)) # 输出维度扩大N倍并chunk成N份
 
     def forward(self, x: torch.Tensor, emb: torch.Tensor):
         shift_mlp1, scale_mlp1, gate_mlp1, shift_mlp2, scale_mlp2, gate_mlp2 = self.adaLN_modulation(emb).chunk(6,
@@ -93,18 +93,18 @@ class MyMixerNNDiffusion(BaseNNDiffusion):
         nn.init.constant_(self.pos_linear.bias, 0)
 
     def forward(self,
-                x: torch.Tensor, noise: torch.Tensor,
+                x: torch.Tensor, noise: torch.Tensor,   # 这里的noise是batched timesteps(torch.int64)
                 condition: Optional[torch.Tensor] = None):
 
         x = self.pre_linear(x)
         emb = self.map_noise(noise)
         if condition is not None:
-            emb += condition
+            emb += condition    # 这里是将timestep的embedding和单时间步状态条件embedding相加
         emb = self.map_emb(emb)
 
         for block in self.mixer_blocks:
-            x = block(x, emb)
-        x = self.pos_linear(self.norm(x))
+            x = block(x, emb)   # x [b, t, n]
+        x = self.pos_linear(self.norm(x))# x [b, t, a]
 
         return x
 
@@ -141,8 +141,8 @@ if __name__ == "__main__":
     t = 0
     for batch in loop_dataloader(dataloader):
 
-        obs = batch["obs"]["state"][:, 0].to(device)
-        act = batch["act"].to(device)
+        obs = batch["obs"]["state"][:, 0].to(device)    # batch["obs"]["state"] [b, t, n], obs [b, n]
+        act = batch["act"].to(device)   # batch["act"] [b, t, a]
 
         avg_loss += actor.update(act, obs)["loss"]
 

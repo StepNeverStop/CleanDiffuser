@@ -46,14 +46,14 @@ class GaussianNormalizer(EmptyNormalizer):
 
     def __init__(self, X: np.ndarray, start_dim: int = -1):
         total_dims = X.ndim
-        if start_dim < 0:
+        if start_dim < 0:   # todo: 这里的start_dim的具体含义还不太理解
             start_dim = total_dims + start_dim
 
         axes = tuple(range(start_dim))
 
         self.mean = np.mean(X, axis=axes)
         self.std = np.std(X, axis=axes)
-        self.std[self.std == 0] = 1.
+        self.std[self.std == 0] = 1.    # 这里应该是处理方差为0的异常情况
 
     def normalize(self, x: np.ndarray):
         ndim = x.ndim

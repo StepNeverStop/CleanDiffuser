@@ -352,25 +352,28 @@ def _to_str(num):
 
 
 def param_to_module(param):
-    module_name = param[::-1].split(".", maxsplit=1)[-1][::-1]
+    module_name = param[::-1].split(".", maxsplit=1)[-1][::-1]  # 这里的效果是将param中的最后一个.前边的字符串提取出来
     return module_name
 
 
 def report_parameters(model, topk=10):
-    counts = {k: p.numel() for k, p in model.named_parameters() if p.requires_grad}
+    """
+    打印可训练的神经网络参数信息，topk指的是具体显示信息的模块数量
+    """
+    counts = {k: p.numel() for k, p in model.named_parameters() if p.requires_grad} # todo: 这里的p.numel()是什么意思？
     n_parameters = sum(counts.values())
     print(f"Total parameters: {_to_str(n_parameters)}")
 
     modules = dict(model.named_modules())
-    sorted_keys = sorted(counts, key=lambda x: -counts[x])
-    for i in range(topk):
+    sorted_keys = sorted(counts, key=lambda x: -counts[x])  # sort by descending order，todo: 按参数数量降序排列？
+    for i in range(topk):   # 打印前十可训练参数量的模块
         key = sorted_keys[i]
         count = counts[key]
         module = param_to_module(key)
         print(" " * 8, f"{key:10}: {_to_str(count)} | {modules[module]}")
 
     remaining_parameters = sum([counts[k] for k in sorted_keys[topk:]])
-    print(
+    print(  # 打印剩余的模块总参数信息
         " " * 8,
         f"... and {len(counts) - topk} others accounting for {_to_str(remaining_parameters)} parameters",
     )
