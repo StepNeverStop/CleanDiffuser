@@ -10,11 +10,11 @@ from cleandiffuser.utils import GaussianNormalizer, dict_apply
 def return_reward_range(dataset, max_episode_steps):
     """ Return the range of episodic returns in the D4RL-MuJoCo dataset. """
     returns, lengths = [], []
-    ep_ret, ep_len = 0.0, 0
+    ep_ret, ep_len = 0.0, 0 # 记录一个episode的return和长度
     for r, d in zip(dataset["rewards"], dataset["terminals"]):
         ep_ret += float(r)
         ep_len += 1
-        if d or ep_len == max_episode_steps:
+        if d or ep_len == max_episode_steps:    # 如果到达终止状态或者达到最大步数
             returns.append(ep_ret)
             lengths.append(ep_len)
             ep_ret, ep_len = 0.0, 0

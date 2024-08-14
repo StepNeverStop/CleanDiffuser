@@ -164,10 +164,10 @@ class ContinuousEDM(DiffusionModel):
         return xt, t, eps
 
     def loss(self, x0, condition=None):
-
+        # x0: torch.Tensor, [b, a]; condition: torch.Tensor, [b, s]
         xt, t, eps = self.add_noise(x0)
 
-        condition = self.model["condition"](condition) if condition is not None else None
+        condition = self.model["condition"](condition) if condition is not None else None   # [b, s]
 
         loss = (self.D(xt, t, condition) - x0) ** 2
 

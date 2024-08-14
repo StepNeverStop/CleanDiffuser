@@ -83,15 +83,15 @@ if __name__ == "__main__":
             rew = batch["rew"].to(device)
             tml = batch["tml"].to(device)
 
-            q = iql_q_target(obs, act)
+            q = iql_q_target(obs, act)  # update V using target Q
             v = iql_v(obs)
-            v_loss = (torch.abs(0.7 - ((q - v) < 0).float()) * (q - v) ** 2).mean()
+            v_loss = (torch.abs(0.7 - ((q - v) < 0).float()) * (q - v) ** 2).mean() # q < v, coefficient = 0.3, else 0.7
 
             v_optim.zero_grad()
             v_loss.backward()
             v_optim.step()
 
-            with torch.no_grad():
+            with torch.no_grad():   # update Q using stop-gradient V of next state
                 td_target = rew + 0.99 * (1 - tml) * iql_v(next_obs)
             q1, q2 = iql_q.both(obs, act)
             q_loss = ((q1 - td_target) ** 2 + (q2 - td_target) ** 2).mean()
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         Consistency Distillation (CD) requires a well-trained EDM backbone. 
         If you only want to test Consistency Training, this step is not necessary.
         """
-        
+        # p(a|s)
         nn_diffusion = IDQLMlp(obs_dim, act_dim, emb_dim=64, timestep_emb_type="untrainable_fourier")
         nn_condition = IdentityCondition(dropout=0.0)
 
