@@ -77,12 +77,12 @@ def pipeline(args):
         for batch in loop_dataloader(dataloader):
 
             obs, next_obs = batch["obs"]["state"].to(args.device), batch["next_obs"]["state"].to(args.device)
-            act = batch["act"].to(args.device)
+            act = batch["act"].to(args.device)  # [b, a]
             rew = batch["rew"].to(args.device)
             tml = batch["tml"].to(args.device)
 
             # -- IQL Training
-            if n_gradient_step % 2 == 0:
+            if n_gradient_step % 2 == 0:    # 每 2 步更新一次 Q 和 V 函数
 
                 q = iql_q_target(obs, act)
                 v = iql_v(obs)
@@ -143,7 +143,7 @@ def pipeline(args):
                 break
 
     # ---------------------- Inference ----------------------
-    elif args.mode == "inference":
+    elif args.mode == "inference":  # todo: debug
 
         actor.load(save_path + f"diffusion_ckpt_{args.ckpt}.pt")
         critic_ckpt = torch.load(save_path + f"iql_ckpt_{args.ckpt}.pt")

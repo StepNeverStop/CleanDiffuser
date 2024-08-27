@@ -25,6 +25,7 @@ from cleandiffuser.utils.iql import TwinQ
 class SupportedActionD4RLMuJoCoTDDataset(D4RLMuJoCoTDDataset):
     
     def __init__(self, dataset: torch.Dict[str, ndarray], normalize_reward: bool = False, K: int = 16):
+        # todo： 这个 K 是干嘛的？
         super().__init__(dataset, normalize_reward)
         self.supported_act = torch.empty((self.size, K, self.a_dim), dtype=torch.float32)
         
@@ -75,8 +76,8 @@ def pipeline(args):
         avg_bc_loss = 0.
         for batch in loop_dataloader(dataloader):
             
-            obs = batch["obs"]["state"].to(device)
-            act = batch["act"].to(device)
+            obs = batch["obs"]["state"].to(device)  # [b, s]
+            act = batch["act"].to(device)   # [b, a]
             
             avg_bc_loss += actor.update(act, obs)["loss"]
             
@@ -92,7 +93,7 @@ def pipeline(args):
             if n_gradient_step >= args.bc_gradient_steps:
                 break
     
-    elif mode == "supported_action_collecting":
+    elif mode == "supported_action_collecting": # todo: debug
         
         actor.load(save_path + 'diffusion_ckpt_latest.pt')
         
@@ -118,7 +119,7 @@ def pipeline(args):
         
         torch.save(dataset.supported_act, save_path + 'supported_act.pt')
         
-    elif mode == "q_training":
+    elif mode == "q_training":  # todo: debug
         
         dataset.supported_act = torch.load(save_path + 'supported_act.pt')
         dataloader = DataLoader(dataset, batch_size=256, shuffle=True, num_workers=4, persistent_workers=True)
@@ -169,7 +170,7 @@ def pipeline(args):
             if n_gradient_step >= args.q_gradient_steps:
                 break
     
-    elif mode == "cep_training":
+    elif mode == "cep_training":    # todo: debug
         
         nn_classifier = QGPONNClassifier(obs_dim, act_dim, 64, [256, 256, 256], "untrainable_fourier")
         clf = QGPOClassifier(nn_classifier, ema_rate=args.ema_rate, device=device, optim_params={"lr": 1e-3})
@@ -211,7 +212,7 @@ def pipeline(args):
             if n_gradient_step >= args.cep_gradient_steps:
                 break
             
-    elif mode == "inference":
+    elif mode == "inference":   # todo: debug
         
         num_envs = args.num_envs
         num_episodes = args.num_episodes
