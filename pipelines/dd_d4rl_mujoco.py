@@ -51,12 +51,12 @@ def pipeline(args):
 
     # ----------------- Masking -------------------
     fix_mask = torch.zeros((args.task.horizon, obs_dim))
-    fix_mask[0] = 1.
+    fix_mask[0] = 1.    # 将输入的第 1 个时刻的 mask 设置为 1，加噪时序列的第一个状态不加噪声，损失也过滤这项的批评
     loss_weight = torch.ones((args.task.horizon, obs_dim))
-    loss_weight[1] = args.next_obs_loss_weight
+    loss_weight[1] = args.next_obs_loss_weight  # 设置损失的第 2 个时刻的 loss 权重，关注1step立即转移
 
     # --------------- Diffusion Model with Classifier-Free Guidance --------------------
-    agent = ContinuousDiffusionSDE(
+    agent = ContinuousDiffusionSDE( # p(s_1, s_2, ..., s_n | s_0, v(s_0), t_diffusion, t_horizon)
         nn_diffusion, nn_condition,
         fix_mask=fix_mask, loss_weight=loss_weight, ema_rate=args.ema_rate,
         device=args.device, predict_noise=args.predict_noise, noise_schedule="linear")
@@ -78,9 +78,9 @@ def pipeline(args):
 
         for batch in loop_dataloader(dataloader):
 
-            obs = batch["obs"]["state"].to(args.device)
-            act = batch["act"].to(args.device)
-            val = batch["val"].to(args.device) / return_scale
+            obs = batch["obs"]["state"].to(args.device) # [B, T, N]
+            act = batch["act"].to(args.device)  # [B, T, N]
+            val = batch["val"].to(args.device) / return_scale   # [B, 1]
 
             # ----------- Gradient Step ------------
             log["avg_loss_diffusion"] += agent.update(obs, val)['loss']
@@ -109,7 +109,7 @@ def pipeline(args):
                 break
 
     # ---------------------- Inference ----------------------
-    elif args.mode == "inference":
+    elif args.mode == "inference":  # todo：
 
         agent.load(save_path + f"diffusion_ckpt_{args.diffusion_ckpt}.pt")
         agent.eval()

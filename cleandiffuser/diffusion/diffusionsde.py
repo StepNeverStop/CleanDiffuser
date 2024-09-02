@@ -701,7 +701,7 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
         # ==================== Continuous Time-step Range ====================
         if noise_schedule == "cosine":
             self.t_diffusion = [epsilon, 0.9946]
-        else:
+        else:   # noise_schedule = "linear"
             self.t_diffusion = [epsilon, 1.]
 
         # ===================== Noise Schedule ======================
