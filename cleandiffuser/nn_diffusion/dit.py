@@ -122,6 +122,8 @@ class DiT1d(BaseNNDiffusion):
         emb = self.map_noise(noise) # [B, N2]
         if condition is not None:
             emb = emb + condition   # 加噪时间步条件 embedding 和生成条件 embedding 相加
+        else:
+            emb = emb + torch.zeros_like(emb)
         emb = self.map_emb(emb) # [B, N2] => [B, N]
 
         for block in self.blocks:

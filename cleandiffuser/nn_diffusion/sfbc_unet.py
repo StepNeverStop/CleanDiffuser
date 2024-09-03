@@ -66,6 +66,8 @@ class SfBCUNet(BaseNNDiffusion):
         c = self.t_layer(self.map_noise(noise))
         if condition is not None:
             c += condition  # 条件信息与时间信息相加，贯穿到每一步
+        else:
+            c += torch.zeros_like(c)
 
         buffer = []
         for block in self.down_blocks:
