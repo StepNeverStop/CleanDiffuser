@@ -63,8 +63,8 @@ class ResidualBlock(nn.Module):
             nn.Mish(), nn.Linear(emb_dim, out_dim))
         self.residual_conv = nn.Conv1d(in_dim, out_dim, 1) if in_dim != out_dim else nn.Identity()
 
-    def forward(self, x, emb):
-        out = self.conv1(x) + self.emb_mlp(emb).unsqueeze(-1)
+    def forward(self, x, emb):  # x: [B, N, T], emb: [B, emb_dim]
+        out = self.conv1(x) + self.emb_mlp(emb).unsqueeze(-1)   # [B, N, T]
         out = self.conv2(out)
         return out + self.residual_conv(x)
 
@@ -137,7 +137,7 @@ class JannerUNet1d(BaseNNDiffusion):
         self.mid_block2 = ResidualBlock(mid_dim, mid_dim, model_dim, kernel_size, norm_type)
 
         for ind, (dim_in, dim_out) in enumerate(reversed(in_out[1:])):
-            is_last = ind >= (num_resolutions - 1)
+            is_last = ind >= (num_resolutions - 1)  # 这里是不是应该是 ind >= (num_resolutions - 2)，好像条件没有真的触发
 
             self.ups.append(nn.ModuleList([
                 ResidualBlock(dim_out * 2, dim_in, model_dim, kernel_size, norm_type),
@@ -166,9 +166,9 @@ class JannerUNet1d(BaseNNDiffusion):
         # check horizon dimension
         assert x.shape[1] & (x.shape[1] - 1) == 0, "Ta dimension must be 2^n"
 
-        x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)  # [B, T, N] => [B, N, T]
 
-        emb = self.map_noise(noise)
+        emb = self.map_noise(noise) # [B, ] => [B, emb_dim]
         if condition is not None:
             emb = emb + condition
         else:
@@ -182,7 +182,7 @@ class JannerUNet1d(BaseNNDiffusion):
             x = resnet2(x, emb)
             x = attn(x)
             h.append(x)
-            x = downsample(x)
+            x = downsample(x)   # T会减半
 
         x = self.mid_block1(x, emb)
         x = self.mid_attn(x)
@@ -193,9 +193,9 @@ class JannerUNet1d(BaseNNDiffusion):
             x = resnet1(x, emb)
             x = resnet2(x, emb)
             x = attn(x)
-            x = upsample(x)
+            x = upsample(x) # T会加倍
 
         x = self.final_conv(x)
 
-        x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)  # [B, N, T] => [B, T, N]
         return x

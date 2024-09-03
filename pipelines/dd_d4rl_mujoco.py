@@ -62,7 +62,7 @@ def pipeline(args):
         device=args.device, predict_noise=args.predict_noise, noise_schedule="linear")
 
     # --------------- Inverse Dynamic -------------------
-    invdyn = MlpInvDynamic(obs_dim, act_dim, 512, nn.Tanh(), {"lr": 2e-4}, device=args.device)
+    invdyn = MlpInvDynamic(obs_dim, act_dim, 512, nn.Tanh(), {"lr": 2e-4}, device=args.device)  # p(a_0|s_0, s_1)
 
     # ---------------------- Training ----------------------
     if args.mode == "train":
@@ -139,7 +139,7 @@ def pipeline(args):
 
                 # inverse dynamic
                 with torch.no_grad():
-                    act = invdyn.predict(obs, traj[:, 1, :]).cpu().numpy()
+                    act = invdyn.predict(obs, traj[:, 1, :]).cpu().numpy()  # pi(a_0|s_0, s_1)
 
                 # step
                 obs, rew, done, info = env_eval.step(act)

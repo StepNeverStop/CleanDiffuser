@@ -76,7 +76,7 @@ class HalfJannerUNet1d(BaseNNDiffusion):
             ]))
 
             if not is_last:
-                horizon = horizon // 2
+                horizon = horizon // 2  # todo：这里很多horizon//2的操作，不是很理解原因
 
         mid_dim = dims[-1]
         mid_dim_2 = mid_dim // 2
@@ -103,9 +103,9 @@ class HalfJannerUNet1d(BaseNNDiffusion):
                 x: torch.Tensor, noise: torch.Tensor,
                 condition: Optional[torch.Tensor] = None):
 
-        x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)  # [B, T, N] -> [B, N, T]
 
-        emb = self.map_noise(noise)
+        emb = self.map_noise(noise) # [B, ] -> [B, emb_dim]
         if condition is not None:
             emb = emb + condition
         emb = self.map_emb(emb)
@@ -113,13 +113,13 @@ class HalfJannerUNet1d(BaseNNDiffusion):
         for resnet1, resnet2, downsample in self.downs:
             x = resnet1(x, emb)
             x = resnet2(x, emb)
-            x = downsample(x)
+            x = downsample(x)   # [B, N, T] -> [B, N, T//2]
 
         x = self.mid_block1[0](x, emb)
         x = self.mid_block1[1](x)
         x = self.mid_block2[0](x, emb)
         x = self.mid_block2[1](x)
 
-        x = x.flatten(1)
+        x = x.flatten(1)    # 把T维度压平，[B, N, T] -> [B, N, 1] => [B, N]
         out = self.final_block(torch.cat([x, emb], dim=-1))
         return out

@@ -36,10 +36,10 @@ def pipeline(args):
     obs_dim, act_dim = dataset.o_dim, dataset.a_dim
 
     # --------------- Network Architecture -----------------
-    nn_diffusion = JannerUNet1d(
+    nn_diffusion = JannerUNet1d(    # p(a_0, s_1, a_1,..., s_n, a_n|s_0, v_0), p(v_0 | s_0, a_0, ..., s_n, a_n)
         obs_dim + act_dim, model_dim=args.model_dim, emb_dim=args.model_dim, dim_mult=args.task.dim_mult,
         timestep_emb_type="positional", attention=False, kernel_size=5)
-    nn_classifier = HalfJannerUNet1d(
+    nn_classifier = HalfJannerUNet1d(   # p(v_0 | s_0, a_0, ..., s_n, a_n)
         args.task.horizon, obs_dim + act_dim, out_dim=1,
         model_dim=args.model_dim, emb_dim=args.model_dim, dim_mult=args.task.dim_mult,
         timestep_emb_type="positional", kernel_size=3)
@@ -55,9 +55,9 @@ def pipeline(args):
 
     # ----------------- Masking -------------------
     fix_mask = torch.zeros((args.task.horizon, obs_dim + act_dim))
-    fix_mask[0, :obs_dim] = 1.
+    fix_mask[0, :obs_dim] = 1.  # 第0个时刻的观测是固定的，不加噪声
     loss_weight = torch.ones((args.task.horizon, obs_dim + act_dim))
-    loss_weight[0, obs_dim:] = args.action_loss_weight
+    loss_weight[0, obs_dim:] = args.action_loss_weight  # 第0个时刻的动作损失权重按参数设置
 
     # --------------- Diffusion Model --------------------
     agent = DiscreteDiffusionSDE(
@@ -78,9 +78,9 @@ def pipeline(args):
 
         for batch in loop_dataloader(dataloader):
 
-            obs = batch["obs"]["state"].to(args.device)
-            act = batch["act"].to(args.device)
-            val = batch["val"].to(args.device)
+            obs = batch["obs"]["state"].to(args.device) # [B, T, S]
+            act = batch["act"].to(args.device)  # [B, T, A]
+            val = batch["val"].to(args.device)  # [B, 1]
 
             x = torch.cat([obs, act], -1)
 
@@ -111,7 +111,7 @@ def pipeline(args):
                 break
 
     # ---------------------- Inference ----------------------
-    elif args.mode == "inference":
+    elif args.mode == "inference":  # todo:
 
         agent.load(save_path + f"diffusion_ckpt_{args.ckpt}.pt")
         agent.classifier.load(save_path + f"classifier_ckpt_{args.ckpt}.pt")
@@ -141,10 +141,10 @@ def pipeline(args):
                     use_ema=args.use_ema, w_cg=args.task.w_cg, temperature=args.temperature)
 
                 # select the best plan
-                logp = log["log_p"].view(args.num_candidates, args.num_envs, -1).sum(-1)
-                idx = logp.argmax(0)
+                logp = log["log_p"].view(args.num_candidates, args.num_envs, -1).sum(-1)    # [N*B, 1] => [N, B, 1] => [N, B]
+                idx = logp.argmax(0)    # 每个样本生成的candidates中按概率/预测回报取最大的索引，这里其实有点儿像MPC，只是能够一步估计出序列的价值
                 act = traj.view(args.num_candidates, args.num_envs, args.task.horizon, -1)[
-                      idx, torch.arange(args.num_envs), 0, obs_dim:]
+                      idx, torch.arange(args.num_envs), 0, obs_dim:]    # 取每个样本最大概率的candidates的第一个时刻中的动作
                 act = act.clip(-1., 1.).cpu().numpy()
 
                 # step

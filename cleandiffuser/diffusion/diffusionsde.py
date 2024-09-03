@@ -191,7 +191,7 @@ class BaseDiffusionSDE(DiffusionModel):
                 pred = model["diffusion"](xt, t, condition)
                 pred_uncond = 0.
 
-        if self.predict_noise or not self.predict_noise:
+        if self.predict_noise or not self.predict_noise:    # todo: 这是何意？
             bar_pred = w * pred + (1 - w) * pred_uncond
         else:
             bar_pred = pred
@@ -487,7 +487,7 @@ class DiscreteDiffusionSDE(BaseDiffusionSDE):
             xt = warm_start_reference * fwd_alpha + fwd_sigma * torch.randn_like(warm_start_reference)
         else:
             diffusion_steps = self.diffusion_steps
-            xt = torch.randn_like(prior) * temperature
+            xt = torch.randn_like(prior) * temperature  # 控制随机高斯噪声的尺度
         xt = xt * (1. - self.fix_mask) + prior * self.fix_mask
         if preserve_history:
             log["sample_history"][:, 0] = xt.cpu().numpy()
@@ -500,7 +500,7 @@ class DiscreteDiffusionSDE(BaseDiffusionSDE):
         if isinstance(sample_step_schedule, str):
             if sample_step_schedule in SUPPORTED_SAMPLING_STEP_SCHEDULE.keys():
                 sample_step_schedule = SUPPORTED_SAMPLING_STEP_SCHEDULE[sample_step_schedule](
-                    diffusion_steps, sample_steps)
+                    diffusion_steps, sample_steps)  # todo: check, diffuser这里为什么前2个是0，是不是代码出错了？
             else:
                 raise ValueError(f"Sampling step schedule {sample_step_schedule} is not supported.")
         elif callable(sample_step_schedule):
@@ -594,7 +594,7 @@ class DiscreteDiffusionSDE(BaseDiffusionSDE):
         if self.classifier is not None:
             with torch.no_grad():
                 t = torch.zeros((n_samples,), dtype=torch.long, device=self.device)
-                logp = self.classifier.logp(xt, t, condition_vec_cg)
+                logp = self.classifier.logp(xt, t, condition_vec_cg)    # 这里应该是去噪完成后再计算一次分类器的概率
             log["log_p"] = logp
 
         if self.clip_pred:
@@ -829,7 +829,7 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
                 torch.ones((1,), device=self.device) * warm_start_forward_level, **(self.noise_schedule_params or {}))
             xt = warm_start_reference * fwd_alpha + fwd_sigma * torch.randn_like(warm_start_reference)
         else:
-            xt = torch.randn_like(prior) * temperature
+            xt = torch.randn_like(prior) * temperature  # 这里的temperature是噪声的尺度，影响噪声的方差
         xt = xt * (1. - self.fix_mask) + prior * self.fix_mask
         if preserve_history:
             log["sample_history"][:, 0] = xt.cpu().numpy()
@@ -940,7 +940,7 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
         if self.classifier is not None and w_cg != 0.:
             with torch.no_grad():
                 t = torch.zeros((n_samples,), dtype=torch.long, device=self.device)
-                logp = self.classifier.logp(xt, t, condition_vec_cg)
+                logp = self.classifier.logp(xt, t, condition_vec_cg)    # todo: check this
             log["log_p"] = logp
 
         if self.clip_pred:

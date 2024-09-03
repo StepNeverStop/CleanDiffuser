@@ -56,7 +56,7 @@ class Mlp(nn.Module):
         return self.mlp(x)
 
 
-class GroupNorm1d(nn.Module):
+class GroupNorm1d(nn.Module):   # todo： 搞清楚GroupNorm的原理
     def __init__(self, dim, num_groups=32, min_channels_per_group=4, eps=1e-5):
         super().__init__()
         self.num_groups = min(num_groups, dim // min_channels_per_group)
@@ -71,7 +71,7 @@ class GroupNorm1d(nn.Module):
             weight=self.weight.to(x.dtype),
             bias=self.bias.to(x.dtype),
             eps=self.eps,
-        )
+        )   # [B, N, T] -> [B, N, 1, T]
         return x.squeeze(2)
 
 
