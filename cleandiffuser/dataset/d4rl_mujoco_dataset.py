@@ -93,15 +93,15 @@ class D4RLMuJoCoDataset(BaseDataset):
         self.horizon = horizon
         self.o_dim, self.a_dim = observations.shape[-1], actions.shape[-1]
 
-        n_paths = np.sum(np.logical_or(terminals, timeouts))
+        n_paths = np.sum(np.logical_or(terminals, timeouts))    # 统计有多少个轨迹片段
         self.seq_obs = np.zeros((n_paths, max_path_length, self.o_dim), dtype=np.float32)
         self.seq_act = np.zeros((n_paths, max_path_length, self.a_dim), dtype=np.float32)
         self.seq_rew = np.zeros((n_paths, max_path_length, 1), dtype=np.float32)
-        self.seq_val = np.zeros((n_paths, max_path_length, 1), dtype=np.float32)
+        self.seq_val = np.zeros((n_paths, max_path_length, 1), dtype=np.float32)    # discounted return
         self.tml_and_not_timeout = []
         self.indices = []
 
-        path_lengths, ptr = [], 0
+        path_lengths, ptr = [], 0   # ptr指的是当前episode的开始index，path_lengths存储每个 episode 的长度
         path_idx = 0
         for i in range(timeouts.shape[0]):
             if timeouts[i] or terminals[i]:
@@ -116,7 +116,7 @@ class D4RLMuJoCoDataset(BaseDataset):
                 self.seq_rew[path_idx, :i - ptr + 1] = rewards[ptr:i + 1][:, None]
 
                 max_start = min(path_lengths[-1] - 1, max_path_length - horizon)
-                self.indices += [(path_idx, start, start + horizon) for start in range(max_start + 1)]
+                self.indices += [(path_idx, start, start + horizon) for start in range(max_start + 1)]  # 将一条轨迹切分成长度相同的子轨迹片段
 
                 ptr = i + 1
                 path_idx += 1
@@ -197,7 +197,7 @@ class D4RLMuJoCoTDDataset(BaseDataset):
             dataset["terminals"].astype(np.float32))
 
         self.normalizers = {
-            "state": GaussianNormalizer(observations)}
+            "state": GaussianNormalizer(observations)}  # 当前时刻和后一时刻都是用当前时刻的归一化特征值
         normed_observations = self.normalizers["state"].normalize(observations)
         normed_next_observations = self.normalizers["state"].normalize(next_observations)
 

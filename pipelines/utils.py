@@ -32,7 +32,7 @@ def make_dir(dir_path):
     return dir_path
 
 
-def set_seed(seed: int):
+def set_seed(seed: int):    # 设置随机种子
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)

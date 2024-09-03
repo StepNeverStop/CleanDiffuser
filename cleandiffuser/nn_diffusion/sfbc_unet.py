@@ -16,6 +16,7 @@ class ResidualBlock(nn.Module):
         self.skip = nn.Linear(in_dim, out_dim) if in_dim != out_dim else nn.Identity()
 
     def forward(self, x: torch.Tensor, c: torch.Tensor):
+        # h(f(a) + g(b)) + u(a)
         return self.linear2(self.linear1(x) + self.linearc(c)) + self.skip(x)
 
 
@@ -64,7 +65,9 @@ class SfBCUNet(BaseNNDiffusion):
         """
         c = self.t_layer(self.map_noise(noise))
         if condition is not None:
-            c += condition
+            c += condition  # 条件信息与时间信息相加，贯穿到每一步
+        else:
+            c += torch.zeros_like(c)
 
         buffer = []
         for block in self.down_blocks:
@@ -74,7 +77,7 @@ class SfBCUNet(BaseNNDiffusion):
         x = self.mid_block(x, c)
 
         for block in self.up_blocks:
-            x = torch.cat([x, buffer.pop()], dim=-1)
+            x = torch.cat([x, buffer.pop()], dim=-1)    # 这里有个U-Net的跳连接
             x = block(x, c)
 
         return self.out_layer(x)

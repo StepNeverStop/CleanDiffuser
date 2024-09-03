@@ -215,7 +215,7 @@ def pipeline(args):
 
     # --------------- Network Architecture -----------------
     nn_diffusion = IDQLMlp(
-        0, obs_dim * 2 + act_dim + 2, emb_dim=128,
+        0, obs_dim * 2 + act_dim + 2, emb_dim=128,  # s, a, r, s`, d, dim(s)*2+dim(a)+2
         hidden_dim=1024, n_blocks=6,
         timestep_emb_type="positional")
 
@@ -245,7 +245,7 @@ def pipeline(args):
             rew = batch["rew"].to(args.device)
             tml = batch["tml"].to(args.device)
 
-            x = torch.cat([obs, act, rew, next_obs, tml], -1)
+            x = torch.cat([obs, act, rew, next_obs, tml], -1)   # <s, a, r, s`, d>
 
             log["avg_diffusion_loss"] += synther.update(x)["loss"]
             lr_scheduler.step()
@@ -267,7 +267,7 @@ def pipeline(args):
                 break
 
     # ---------------------- Dataset Upsampling ----------------------------
-    elif args.mode == "dataset_upsampling":
+    elif args.mode == "dataset_upsampling": # todo: debug
 
         synther.load(save_path + f"diffusion_ckpt_{args.ckpt}.pt")
         synther.eval()
@@ -292,7 +292,7 @@ def pipeline(args):
         print(f'Finish.')
 
     # --------------------- Train RL ------------------------
-    elif args.mode == "train_rl":
+    elif args.mode == "train_rl":   # todo: debug
 
         dataset = SynthERD4RLMuJoCoTDDataset(save_path, d4rl.qlearning_dataset(env), args.normalize_reward)
         dataloader = DataLoader(
@@ -337,7 +337,7 @@ def pipeline(args):
                 break
 
     # ---------------------- Inference ----------------------
-    elif args.mode == "inference":
+    elif args.mode == "inference":  # todo: debug
 
         td3bc = TD3BC(obs_dim, act_dim, device=args.device)
         td3bc.load(save_path + f"td3bc_ckpt_{args.ckpt}.pt")

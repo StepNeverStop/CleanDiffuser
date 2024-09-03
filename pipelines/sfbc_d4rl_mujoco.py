@@ -94,7 +94,7 @@ def pipeline(args):
             if n_gradient_step > args.bc_gradient_steps:
                 break
 
-    elif args.mode == "critic_training":
+    elif args.mode == "critic_training":    # todo: debug
 
         actor.load(save_path + f'diffusion_ckpt_{args.eval_actor_ckpt}.pt')
         actor.eval()
@@ -159,7 +159,7 @@ def pipeline(args):
 
         torch.save(critic.state_dict(), save_path + "critic.pt")
 
-    elif args.mode == "inference":
+    elif args.mode == "inference":  # todo: debug
 
         num_candidates = args.num_candidates
 

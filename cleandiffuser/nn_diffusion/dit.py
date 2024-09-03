@@ -8,7 +8,7 @@ from cleandiffuser.nn_diffusion import BaseNNDiffusion
 
 
 def modulate(x, shift, scale):
-    return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
+    return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)    # [B, T, N] * [B, 1, N]
 
 
 class DiTBlock(nn.Module):
@@ -16,7 +16,7 @@ class DiTBlock(nn.Module):
 
     def __init__(self, hidden_size: int, n_heads: int, dropout: float = 0.0):
         super().__init__()
-        self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)  # todo：elementwise_affine是什么作用呢？
         self.attn = nn.MultiheadAttention(hidden_size, n_heads, dropout, batch_first=True)
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
 
@@ -66,11 +66,11 @@ class DiT1d(BaseNNDiffusion):
         self.in_dim, self.emb_dim = in_dim, emb_dim
         self.d_model = d_model
 
-        self.x_proj = nn.Linear(in_dim, d_model)
-        self.map_emb = nn.Sequential(
+        self.x_proj = nn.Linear(in_dim, d_model)    # embed 原始输入
+        self.map_emb = nn.Sequential(   # embed 条件信息
             nn.Linear(emb_dim, d_model), nn.Mish(), nn.Linear(d_model, d_model), nn.Mish())
 
-        self.pos_emb = SinusoidalEmbedding(d_model)
+        self.pos_emb = SinusoidalEmbedding(d_model) # embed 位置信息
         self.pos_emb_cache = None
 
         self.blocks = nn.ModuleList([
@@ -116,17 +116,19 @@ class DiT1d(BaseNNDiffusion):
             y:          (b, horizon, in_dim)
         """
         if self.pos_emb_cache is None or self.pos_emb_cache.shape[0] != x.shape[1]:
-            self.pos_emb_cache = self.pos_emb(torch.arange(x.shape[1], device=x.device))
+            self.pos_emb_cache = self.pos_emb(torch.arange(x.shape[1], device=x.device))    # [T, N]
 
-        x = self.x_proj(x) + self.pos_emb_cache[None,]
-        emb = self.map_noise(noise)
+        x = self.x_proj(x) + self.pos_emb_cache[None,]  # [B, T, N]，为原始输入添加时间信息
+        emb = self.map_noise(noise) # [B, N2]
         if condition is not None:
-            emb = emb + condition
-        emb = self.map_emb(emb)
+            emb = emb + condition   # 加噪时间步条件 embedding 和生成条件 embedding 相加
+        else:
+            emb = emb + torch.zeros_like(emb)
+        emb = self.map_emb(emb) # [B, N2] => [B, N]
 
         for block in self.blocks:
-            x = block(x, emb)
-        x = self.final_layer(x, emb)
+            x = block(x, emb)   # [B, T, N], [B, N] => [B, T, N]
+        x = self.final_layer(x, emb)    # [B, T, N], [B, N] => [B, T, S]
         return x
 
 

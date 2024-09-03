@@ -93,7 +93,7 @@ class BaseDiffusionSDE(DiffusionModel):
 
     def loss(self, x0, condition=None):
 
-        xt, t, eps = self.add_noise(x0) # xt加噪后的输入，t加噪时间步，eps注入的噪声
+        xt, t, eps = self.add_noise(x0) # xt加噪后的输入，t加噪时间步(整数数组），eps注入的噪声。 xt, eps 与 x0 形状一致
 
         condition = self.model["condition"](condition) if condition is not None else None
 
@@ -701,7 +701,7 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
         # ==================== Continuous Time-step Range ====================
         if noise_schedule == "cosine":
             self.t_diffusion = [epsilon, 0.9946]
-        else:
+        else:   # noise_schedule = "linear"
             self.t_diffusion = [epsilon, 1.]
 
         # ===================== Noise Schedule ======================
